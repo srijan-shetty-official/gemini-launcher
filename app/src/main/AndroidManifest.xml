@@ -15,7 +15,7 @@
         android:allowBackup="true"
         android:label="Gemini Launcher"
         android:supportsRtl="true"
-        android:theme="@android:style/Theme.DeviceDefault.NoActionBar.Wallpaper"
+        android:theme="@android:style/Theme.DeviceDefault.NoActionBar"
         android:launchMode="singleTask"
         android:clearTaskOnLaunch="true"
         android:stateNotNeeded="true">
@@ -34,4 +34,3 @@
     </application>
 
 </manifest>
-
