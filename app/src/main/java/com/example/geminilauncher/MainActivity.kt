@@ -22,12 +22,14 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -60,13 +62,16 @@ class MainActivity : ComponentActivity() {
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                // Keep user on Home Screen when Back is pressed
+                // Keep user locked gracefully on Home Screen
             }
         })
 
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme()) {
-                GeminiLauncherScreen()
+            // Material You Dynamic Color scheme mapping seamlessly into Material 3 Expressive spec
+            MaterialTheme(
+                colorScheme = dynamicDarkColorScheme(LocalContext.current)
+            ) {
+                GeminiExpressiveLauncherScreen()
             }
         }
     }
@@ -74,7 +79,7 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun GeminiLauncherScreen() {
+fun GeminiExpressiveLauncherScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val prefs = remember { context.getSharedPreferences("gemini_launcher_prefs", Context.MODE_PRIVATE) }
@@ -92,10 +97,10 @@ fun GeminiLauncherScreen() {
     var batteryPct by remember { mutableIntStateOf(100) }
     val apps = remember { loadInstalledApps(context) }
 
-    // Clock & Battery loop
+    // System clock & battery sync loop
     LaunchedEffect(Unit) {
         val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
-        val dateFormat = SimpleDateFormat("EEEE, MMM d", Locale.getDefault())
+        val dateFormat = SimpleDateFormat("EEEE, MMMM d", Locale.getDefault())
         val bm = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
         while (true) {
             val now = Date()
@@ -110,7 +115,7 @@ fun GeminiLauncherScreen() {
         if (promptText.isBlank()) return
         if (apiKey.isBlank()) {
             showApiKeyDialog = true
-            Toast.makeText(context, "Please enter your Gemini API Key first", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Please set your Gemini API Key first", Toast.LENGTH_SHORT).show()
             return
         }
         isLoading = true
@@ -127,241 +132,278 @@ fun GeminiLauncherScreen() {
         else apps.filter { it.label.contains(searchQuery, ignoreCase = true) }
     }
 
-    Column(
+    val colors = MaterialTheme.colorScheme
+
+    // Expressive container layout
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xCC0F111A))
+            .background(colors.background)
             .statusBarsPadding()
             .navigationBarsPadding()
-            .padding(16.dp)
+            .padding(20.dp)
     ) {
-        // 1. Top Header Bar
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Column {
-                Text(
-                    text = currentTime,
-                    fontSize = 34.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Text(
-                    text = "$currentDate • 🔋 $batteryPct%",
-                    fontSize = 13.sp,
-                    color = Color(0xFFB0BEC5)
-                )
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { showApiKeyDialog = true }) {
-                    Text(if (apiKey.isBlank()) "🔑 Set Key" else "🔑 Key", fontSize = 12.sp)
-                }
-                OutlinedButton(
-                    onClick = { context.startActivity(Intent(Settings.ACTION_HOME_SETTINGS)) }
-                ) {
-                    Text("🏠 Default", fontSize = 12.sp)
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // 2. Inline Gemini Workspace Card
-        Card(
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E2235)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(14.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            // 1. Expressive Material You Header (Clock & Quick Settings Actions)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
-                        text = "✨ Gemini Home Assistant",
-                        color = Color(0xFF8AB4F8),
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp
+                        text = currentTime.ifEmpty { "12:00 PM" },
+                        fontSize = 42.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = colors.onBackground,
+                        letterSpacing = (-1).sp
                     )
-                    TextButton(onClick = { openExternalGeminiApp(context) }) {
-                        Text("Open Full App ↗", fontSize = 12.sp)
+                    Text(
+                        text = "$currentDate  •  $batteryPct% Battery",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = colors.primary
+                    )
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Surface(
+                        onClick = { showApiKeyDialog = true },
+                        shape = CircleShape,
+                        color = colors.surfaceContainerHigh,
+                        contentColor = colors.onSurfaceVariant
+                    ) {
+                        Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                            Text(if (apiKey.isBlank()) "🔑 Set Key" else "🔑 Key", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Surface(
+                        onClick = { context.startActivity(Intent(Settings.ACTION_HOME_SETTINGS)) },
+                        shape = CircleShape,
+                        color = colors.surfaceContainerHigh,
+                        contentColor = colors.onSurfaceVariant
+                    ) {
+                        Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                            Text("🏠 Default", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
+            }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            // 2. Expressive Material 3 AI Workspace Card
+            Surface(
+                shape = RoundedCornerShape(28.dp),
+                color = colors.surfaceContainer,
+                tonalElevation = 6.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .clip(CircleShape)
+                                    .background(colors.primary)
+                            )
+                            Text(
+                                text = "Gemini Expressive AI",
+                                color = colors.primary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
+                        }
+                        TextButton(onClick = { openExternalGeminiApp(context) }) {
+                            Text("Full App ↗", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    // Prompt Input Field
                     OutlinedTextField(
                         value = geminiPrompt,
                         onValueChange = { geminiPrompt = it },
-                        placeholder = { Text("Ask Gemini right here...") },
+                        placeholder = { Text("Ask Gemini or execute smart query...") },
                         singleLine = true,
-                        modifier = Modifier.weight(1f)
+                        shape = RoundedCornerShape(18.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = colors.primary,
+                            unfocusedBorderColor = colors.outlineVariant,
+                            focusedContainerColor = colors.surfaceContainerHighest,
+                            unfocusedContainerColor = colors.surfaceContainerHighest
+                        ),
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        enabled = !isLoading,
-                        onClick = {
-                            sendToGemini(geminiPrompt)
-                            geminiPrompt = ""
-                        }
+
+                    // Quick Action Chips Row
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(if (isLoading) "..." else "Ask")
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Quick Action Chips
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    AssistChip(
-                        onClick = { triggerVoiceAssistant(context) },
-                        label = { Text("🎙️ Voice") }
-                    )
-                    AssistChip(
-                        onClick = {
-                            val clip = getClipboardText(context)
-                            if (clip.isBlank()) {
-                                Toast.makeText(context, "Clipboard is empty!", Toast.LENGTH_SHORT).show()
-                            } else {
-                                sendToGemini("Summarize this concisely in bullet points:\n\n$clip")
-                            }
-                        },
-                        label = { Text("📋 Summarize Clip") }
-                    )
-                    AssistChip(
-                        onClick = {
-                            val clip = getClipboardText(context)
-                            if (clip.isBlank()) {
-                                Toast.makeText(context, "Clipboard is empty!", Toast.LENGTH_SHORT).show()
-                            } else {
-                                sendToGemini("Rewrite this to be clear, polite, and grammatically correct:\n\n$clip")
-                            }
-                        },
-                        label = { Text("✍️ Fix Grammar") }
-                    )
-                    AssistChip(
-                        onClick = {
-                            sendToGemini("Give me 3 high-impact productivity tips and a quick mental focus exercise for today.")
-                        },
-                        label = { Text("⚡ Focus Boost") }
-                    )
-                }
-
-                // Expandable Inline Response Box
-                if (geminiResponse.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 60.dp, max = 200.dp)
-                            .background(Color(0xFF141726), RoundedCornerShape(12.dp))
-                            .padding(12.dp)
-                            .verticalScroll(rememberScrollState())
-                    ) {
-                        Text(
-                            text = geminiResponse,
-                            color = Color(0xFFE8EAED),
-                            fontSize = 14.sp
+                        AssistChip(
+                            onClick = { triggerVoiceAssistant(context) },
+                            label = { Text("🎙️ Voice Assistant") }
+                        )
+                        AssistChip(
+                            onClick = {
+                                val clip = getClipboardText(context)
+                                if (clip.isBlank()) Toast.makeText(context, "Clipboard empty!", Toast.LENGTH_SHORT).show()
+                                else sendToGemini("Summarize cleanly:\n\n$clip")
+                            },
+                            label = { Text("📋 Summarize Clip") }
+                        )
+                        AssistChip(
+                            onClick = {
+                                val clip = getClipboardText(context)
+                                if (clip.isBlank()) Toast.makeText(context, "Clipboard empty!", Toast.LENGTH_SHORT).show()
+                                else sendToGemini("Refine and fix grammar:\n\n$clip")
+                            },
+                            label = { Text("✍️ Fix Grammar") }
+                        )
+                        AssistChip(
+                            onClick = { sendToGemini("Give me an optimized focus plan and 3 key insights for today.") },
+                            label = { Text("⚡ Productivity Boost") }
                         )
                     }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        TextButton(
-                            onClick = {
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                clipboard.setPrimaryClip(ClipData.newPlainText("Gemini Response", geminiResponse))
-                                Toast.makeText(context, "Copied response!", Toast.LENGTH_SHORT).show()
-                            }
+
+                    // Live Expandable AI Response Container
+                    if (geminiResponse.isNotBlank()) {
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = colors.surfaceContainerHighest,
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Copy", fontSize = 12.sp)
+                            Column(
+                                modifier = Modifier
+                                    .padding(14.dp)
+                                    .heightIn(min = 60.dp, max = 180.dp)
+                                    .verticalScroll(rememberScrollState()),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = geminiResponse,
+                                    color = colors.onSurface,
+                                    fontSize = 14.sp,
+                                    lineHeight = 20.sp
+                                )
+                            }
                         }
-                        TextButton(onClick = { geminiResponse = "" }) {
-                            Text("Clear", fontSize = 12.sp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(onClick = {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                clipboard.setPrimaryClip(ClipData.newPlainText("AI Response", geminiResponse))
+                                Toast.makeText(context, "Copied text!", Toast.LENGTH_SHORT).show()
+                            }) {
+                                Text("Copy Text", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                            TextButton(onClick = { geminiResponse = "" }) {
+                                Text("Clear", fontSize = 12.sp, color = colors.error)
+                            }
                         }
                     }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(12.dp))
+            // 3. Expressive App Drawer Search Bar
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = { Text("Search installed applications...") },
+                singleLine = true,
+                shape = RoundedCornerShape(20.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = colors.primary,
+                    unfocusedBorderColor = colors.outlineVariant,
+                    focusedContainerColor = colors.surfaceContainer,
+                    unfocusedContainerColor = colors.surfaceContainer
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
 
-        // 3. Instant App Search Bar
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            placeholder = { Text("Search installed apps...") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp)
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // 4. App Drawer Grid
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(4),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.weight(1f)
-        ) {
-            items(filteredApps, key = { it.packageName }) { app ->
-                Box(
-                    modifier = Modifier
-                        .background(Color(0xFF1A1D2D), RoundedCornerShape(14.dp))
-                        .combinedClickable(
-                            onClick = {
-                                context.packageManager
-                                    .getLaunchIntentForPackage(app.packageName)
-                                    ?.let { context.startActivity(it) }
-                            },
-                            onLongClick = {
-                                val infoIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                    data = Uri.parse("package:${app.packageName}")
+            // 4. Smooth Material 3 App Grid
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(4),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                items(filteredApps, key = { it.packageName }) { app ->
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = colors.surfaceContainer,
+                        tonalElevation = 2.dp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .combinedClickable(
+                                onClick = {
+                                    context.packageManager
+                                        .getLaunchIntentForPackage(app.packageName)
+                                        ?.let { context.startActivity(it) }
+                                },
+                                onLongClick = {
+                                    val infoIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = Uri.parse("package:${app.packageName}")
+                                    }
+                                    context.startActivity(infoIntent)
                                 }
-                                context.startActivity(infoIntent)
-                            }
-                        )
-                        .padding(vertical = 16.dp, horizontal = 8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = app.label,
-                        color = Color.White,
-                        fontSize = 13.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                            )
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(vertical = 18.dp, horizontal = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = app.label,
+                                color = colors.onSurface,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 
-    // Modal Dialog to Save Gemini API Key
+    // Modal API Key Dialog with Expressive Material 3 Design
     if (showApiKeyDialog) {
         var tempKey by remember { mutableStateOf(apiKey) }
         AlertDialog(
             onDismissRequest = { showApiKeyDialog = false },
-            title = { Text("Gemini API Key") },
+            shape = RoundedCornerShape(28.dp),
+            containerColor = colors.surfaceContainerHigh,
+            title = { Text("Gemini API Key Config", fontWeight = FontWeight.Bold) },
             text = {
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        "Get a free API key from aistudio.google.com and paste it below. It is saved locally on your device.",
-                        fontSize = 13.sp
+                        "Paste your API key from Google AI Studio. It is stored securely on your device.",
+                        fontSize = 13.sp,
+                        color = colors.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = tempKey,
                         onValueChange = { tempKey = it.trim() },
                         placeholder = { Text("AIzaSy...") },
                         visualTransformation = PasswordVisualTransformation(),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp)
                     )
                 }
             },
@@ -371,10 +413,11 @@ fun GeminiLauncherScreen() {
                         apiKey = tempKey
                         prefs.edit().putString("api_key", tempKey).apply()
                         showApiKeyDialog = false
-                        Toast.makeText(context, "API Key saved!", Toast.LENGTH_SHORT).show()
-                    }
+                        Toast.makeText(context, "API Key saved successfully!", Toast.LENGTH_SHORT).show()
+                    },
+                    shape = RoundedCornerShape(14.dp)
                 ) {
-                    Text("Save")
+                    Text("Save Key")
                 }
             },
             dismissButton = {
@@ -386,7 +429,7 @@ fun GeminiLauncherScreen() {
     }
 }
 
-// Direct REST call to Gemini 2.5 Flash
+// Direct REST client wrapper for Gemini 2.5 Flash
 suspend fun callGeminiApi(apiKey: String, prompt: String): String = withContext(Dispatchers.IO) {
     try {
         val endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey"
@@ -429,9 +472,9 @@ suspend fun callGeminiApi(apiKey: String, prompt: String): String = withContext(
         val firstCandidate = candidates?.optJSONObject(0)
         val content = firstCandidate?.optJSONObject("content")
         val parts = content?.optJSONArray("parts")
-        parts?.optJSONObject(0)?.optString("text") ?: "No response text received."
+        parts?.optJSONObject(0)?.optString("text") ?: "No text output returned."
     } catch (e: Exception) {
-        "Network error: ${e.localizedMessage}"
+        "Network transmission error: ${e.localizedMessage}"
     }
 }
 
