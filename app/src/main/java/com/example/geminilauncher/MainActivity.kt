@@ -471,7 +471,7 @@ fun triggerVoiceAssistant(context: Context) {
     }
 }
 
-fn getClipboardText(context: Context): String {
+fun getClipboardText(context: Context): String {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     return clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
 }
